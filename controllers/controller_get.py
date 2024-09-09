@@ -70,47 +70,65 @@ async def fetch_agents(session):
     return []  # Return an empty list in case of error
 
 async def fetch_all_tickets(session, dateStamp):
+    print(f"🏳️ Fetching all tickets since: {dateStamp}...")
     page = 1
     all_tickets = []
+    error_details = None
 
     while True:
-        tickets = await fetch_tickets(session, page, dateStamp)
+        try:
+            tickets = await fetch_tickets(session, page, dateStamp)
 
-        if tickets is None:  # Authentication failed
-            return []
-        
-        if len(tickets) < 100:  # Stop if the response length is less than 100
+            if tickets is None:  # Authentication failed
+                return [], "Authentication failure or no tickets."
+
+            if len(tickets) < 100:  # Stop if the response length is less than 100
+                all_tickets.extend(tickets)
+                print(f"Fetched all tickets up to page {page}. Total tickets: {len(all_tickets)}")
+                break
+
             all_tickets.extend(tickets)
-            print(f"Fetched all tickets up to page {page}. Total tickets: {len(all_tickets)}")
-            break
-        
-        all_tickets.extend(tickets)
-        print(f"Page {page} fetched. Total tickets so far: {len(all_tickets)}")
-        page += 1  # Move to the next page
+            print(f"Page {page} fetched. Total tickets so far: {len(all_tickets)}")
+            page += 1  # Move to the next page
 
-    return all_tickets
+        except Exception as err:
+            print(f"An error occurred while fetching tickets: {err}")
+            error_details = str(err)
+            break
+
+    return all_tickets, error_details
+
 
 async def get_req(request):
-    dateStamp = request.headers.get('date')
-    print(f"date: {dateStamp}")
+    dateStamp = request.headers.get('date_req')
+    print(f"🔞 DATE: {dateStamp}")
 
-    
     async with ClientSession() as session:
-        all_tickets = await fetch_all_tickets(session, dateStamp)
+        # Fetch tickets
+        all_tickets, ticket_error = await fetch_all_tickets(session, dateStamp)
+
+        # If there was an error fetching tickets, return the error response
+        if not all_tickets:
+            error_message = f"Failed to fetch tickets. Date: {dateStamp}. Error: {ticket_error or 'No tickets found.'}"
+            return web.Response(text=error_message, status=500)
+
+        # Fetch agents only if fetching tickets was successful
         agents = await fetch_agents(session)
 
-    if not all_tickets:
-        return web.Response(text="Failed to fetch tickets.", status=500)
-    
-    if not agents:
-        return web.Response(text="Failed to fetch agents.", status=500)
+        # If fetching agents failed, return an error response
+        if not agents:
+            return web.Response(text="Failed to fetch agents.", status=500)
 
+    # Continue processing only if both tickets and agents were successfully fetched
     responder_ticket_count = defaultdict(int)
 
     for ticket in all_tickets:
-        if ticket["status"] in [4, 5] and ticket["responder_id"] is not None and ticket["created_at"] >= dateStamp:
-            responder_id = ticket["responder_id"]
-            responder_ticket_count[responder_id] += 1
+        if isinstance(ticket, dict):  # Ensure the ticket is a dictionary
+            if ticket.get("status") in [4, 5] and ticket.get("responder_id") is not None and ticket.get("created_at") >= dateStamp:
+                responder_id = ticket["responder_id"]
+                responder_ticket_count[responder_id] += 1
+        else:
+            print(f"Unexpected ticket format: {ticket}")
 
     agent_map = {agent["id"]: agent["contact"]["name"] for agent in agents}
 

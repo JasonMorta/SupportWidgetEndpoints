@@ -28,12 +28,18 @@ async def fetch_tickets(session, page, dateStamp):
                 print("Authentication failed: Invalid credentials.")
                 return None
             
+            if response.status == 400:
+                print(f"Bad Request: Invalid date format. response: {response}")
+                return None
+            
             return await response.json()
     
     except aiohttp.ClientResponseError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-    except aiohttp.ClientError as req_err:
+        print(f"HTTP error occurred: {http_err}, response: {response}")
+        return None
+    except aiohttp.ClientError as req_err: # This is the error that is raised when the request fails
         print(f"Request error occurred: {req_err}")
+
     except Exception as err:
         print(f"An error occurred: {err}")
     

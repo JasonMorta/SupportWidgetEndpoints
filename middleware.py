@@ -22,7 +22,7 @@ async def main_middleware(app, handler):
                     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
                     "Access-Control-Allow-Headers": "api-key, Content-Type, Authorization, date_req",
                 }
-                return web.json.response(status=200, headers=headers)
+                return web.Response(status=200, headers=headers)
             
 
             # check headers 'api-key' == '123'
@@ -36,10 +36,10 @@ async def main_middleware(app, handler):
                     return response
             
                 except asyncio.TimeoutError:
-                    return web.json.response(text="Request timed out", status=504)
+                    return web.Response(text="Request timed out", status=504)
                 
             else:
-                return web.json.response(text="API key is missing or invalid", status=401)
+                return web.Response(text="API key is missing or invalid", status=401)
                
  
           

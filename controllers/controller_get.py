@@ -3,10 +3,6 @@ from collections import defaultdict
 import aiohttp
 import urllib.parse
 
-
-#dataStamp = "2024-09-01"
-
-
 # Fetch tickets from Freshdesk API
 async def fetch_tickets(session, page, dateStamp):
     url = f"https://newaccount1627234890025.freshdesk.com/api/v2/tickets?updated_since={dateStamp}T00:00:00Z&order_by=created_at&order_type=asc&per_page=100&page={page}"
@@ -23,7 +19,6 @@ async def fetch_tickets(session, page, dateStamp):
         async with session.get(url, headers=headers) as response:
             response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
             
-            # Check if the response status code indicates authentication issues
             if response.status == 401:
                 print("Authentication failed: Invalid credentials.")
                 return None
@@ -37,9 +32,8 @@ async def fetch_tickets(session, page, dateStamp):
     except aiohttp.ClientResponseError as http_err:
         print(f"HTTP error occurred: {http_err}, response: {response}")
         return None
-    except aiohttp.ClientError as req_err: # This is the error that is raised when the request fails
+    except aiohttp.ClientError as req_err:
         print(f"Request error occurred: {req_err}")
-
     except Exception as err:
         print(f"An error occurred: {err}")
     
@@ -59,7 +53,6 @@ async def fetch_agents(session):
         async with session.get(url, headers=headers) as response:
             response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
             
-            # Check if the response status code indicates authentication issues
             if response.status == 401:
                 print("Authentication failed: Invalid credentials.")
                 return None
@@ -126,13 +119,14 @@ async def get_req(request):
             return web.Response(text="Failed to fetch agents.", status=500)
 
     # Continue processing only if both tickets and agents were successfully fetched
-    responder_ticket_count = defaultdict(int)
+    responder_ticket_map = defaultdict(list)
 
+    # Group tickets by agent ID
     for ticket in all_tickets:
         if isinstance(ticket, dict):  # Ensure the ticket is a dictionary
-            if ticket.get("status") in [4, 5] and ticket.get("responder_id") is not None and ticket.get("created_at") >= dateStamp:
+            if ticket.get("status") in [4, 5] and ticket.get("responder_id") is not None and ticket.get("updated_at") >= dateStamp:
                 responder_id = ticket["responder_id"]
-                responder_ticket_count[responder_id] += 1
+                responder_ticket_map[responder_id].append(ticket)
         else:
             print(f"Unexpected ticket format: {ticket}")
 
@@ -142,9 +136,10 @@ async def get_req(request):
         {
             "responder_id": responder_id,
             "name": agent_map.get(responder_id, "Unknown"),
-            "tickets_completed": count
+            "tickets_completed": len(tickets),  # Count the number of completed tickets
+            "ticket_items": tickets  # List of all tickets for this agent
         }
-        for responder_id, count in responder_ticket_count.items()
+        for responder_id, tickets in responder_ticket_map.items()
     ]
     
     return web.json_response(result)

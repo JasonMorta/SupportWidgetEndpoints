@@ -10,12 +10,19 @@ A simple python sever, thats uses aiohttp.
 - Install aiohttp and cors
 ```sh
 pip install aiohttp aiohttp-cors aiohttp_middlewares
+pip install watchdog
+
 
 ```
 
-- Start the server
+- Start the server normally
 ```sh   
 python server.py
+```
+
+- Start the sever with auto restart when changes are made to the files
+```sh
+watchmedo auto-restart --patterns="*.py" --recursive -- python server.py
 ```
 
 API_KEY = 'YrIrUjTXqKENSzo5rdHg' 

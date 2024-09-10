@@ -56,8 +56,9 @@ async def fetch_agents(session):
             if response.status == 401:
                 print("Authentication failed: Invalid credentials.")
                 return None
-            
-            return await response.json()
+            agents = await response.json()
+            print(f"{len(agents)} agents fetched.")
+            return agents
     
     except aiohttp.ClientResponseError as http_err:
         print(f"HTTP error occurred: {http_err}")

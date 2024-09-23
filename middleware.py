@@ -26,7 +26,7 @@ async def main_middleware(app, handler):
             
 
             # check headers 'api-key' == '123'
-            if request.headers.get('api-key') == '123':
+            if request.headers.get('api_key') == '123':
                 
  
                 

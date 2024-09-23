@@ -36,10 +36,10 @@ async def main_middleware(app, handler):
                     return response
             
                 except asyncio.TimeoutError:
-                    return web.Response(text="Request timed out", status=504)
+                    return web.Response(text="Request timed out from server ⌚", status=504)
                 
             else:
-                return web.Response(text="API key is missing or invalid", status=401)
+                return web.Response(text="API key is missing or invalid 🔐", status=401)
                
  
           
